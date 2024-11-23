@@ -26,7 +26,42 @@ const config = {
     wingSpread: "wingSpreadSlider",
     centerEngine: "centerEngineSlider",
     engines: "enginesSlider",
-    engineSpread: "engineSpreadSlider", // New slider for engine spread
+    engineSpread: "engineSpreadSlider",
+  },
+  materials: {
+    // Define materials by name
+    Body: {
+      type: "MeshStandardMaterial",
+      parameters: {
+        color: 0x808080,
+        metalness: 0,
+        roughness: 0.5,
+      },
+    },
+    "Wing Engines": {
+      type: "MeshStandardMaterial",
+      parameters: {
+        color: 0x808080,
+        metalness: 0,
+        roughness: 0.5,
+      },
+    },
+    "Core Engine": {
+      type: "MeshStandardMaterial",
+      parameters: {
+        color: 0x808080,
+        metalness: 0,
+        roughness: 0.5,
+      },
+    },
+    Thrusters: {
+      type: "MeshStandardMaterial",
+      parameters: {
+        color: 0x808080,
+        metalness: 0,
+        roughness: 0.5,
+      },
+    },
   },
 };
 
@@ -71,10 +106,26 @@ const addLights = (scene, lightConfig) => {
   scene.add(directionalLight);
 };
 
-// Load GLTF Model and Extract Vertices
-const loadGLTFModel = (url, onLoadCallback) => {
+// Load GLTF Model and Assign Configurable Materials
+const loadGLTFModel = (url, materialsConfig, onLoadCallback) => {
   const loader = new GLTFLoader();
   loader.load(url, (gltf) => {
+    // Traverse the scene and assign new materials
+    gltf.scene.traverse((child) => {
+      if (child.isMesh && child.material) {
+        const materialName = child.material.name;
+        if (materialsConfig[materialName]) {
+          const materialConfig = materialsConfig[materialName];
+          const newMaterial = new THREE[materialConfig.type](
+            materialConfig.parameters
+          );
+          child.material = newMaterial;
+          child.material.needsUpdate = true;
+          // Store a reference to the material for later updates
+          materialsMap[materialName] = child.material;
+        }
+      }
+    });
     onLoadCallback(gltf);
   });
 };
@@ -129,6 +180,79 @@ const initializeSliders = (sliders, callbacks) => {
   });
 };
 
+// Initialize Material Controls
+const initializeMaterialControls = (materialsConfig) => {
+  const materialControlsContainer = document.getElementById("materialControls");
+
+  Object.entries(materialsConfig).forEach(([materialName, materialConfig]) => {
+    const section = document.createElement("div");
+    section.className = "material-section";
+
+    const title = document.createElement("h3");
+    title.textContent = materialName;
+    section.appendChild(title);
+
+    // Color Picker
+    const colorLabel = document.createElement("label");
+    colorLabel.textContent = "Color:";
+    section.appendChild(colorLabel);
+
+    const colorInput = document.createElement("input");
+    colorInput.type = "color";
+    // Convert the color to hex string
+    const colorHex = `#${new THREE.Color(
+      materialConfig.parameters.color
+    ).getHexString()}`;
+    colorInput.value = colorHex;
+    colorInput.addEventListener("input", (event) => {
+      const color = new THREE.Color(event.target.value);
+      materialsMap[materialName].color.set(color);
+      materialsMap[materialName].needsUpdate = true;
+    });
+    section.appendChild(colorInput);
+    section.appendChild(document.createElement("br"));
+
+    // Metalness Slider
+    const metalnessLabel = document.createElement("label");
+    metalnessLabel.textContent = "Metalness:";
+    section.appendChild(metalnessLabel);
+
+    const metalnessInput = document.createElement("input");
+    metalnessInput.type = "range";
+    metalnessInput.min = 0;
+    metalnessInput.max = 1;
+    metalnessInput.step = 0.01;
+    metalnessInput.value = materialConfig.parameters.metalness;
+    metalnessInput.addEventListener("input", (event) => {
+      const metalness = parseFloat(event.target.value);
+      materialsMap[materialName].metalness = metalness;
+      materialsMap[materialName].needsUpdate = true;
+    });
+    section.appendChild(metalnessInput);
+    section.appendChild(document.createElement("br"));
+
+    // Roughness Slider
+    const roughnessLabel = document.createElement("label");
+    roughnessLabel.textContent = "Roughness:";
+    section.appendChild(roughnessLabel);
+
+    const roughnessInput = document.createElement("input");
+    roughnessInput.type = "range";
+    roughnessInput.min = 0;
+    roughnessInput.max = 1;
+    roughnessInput.step = 0.01;
+    roughnessInput.value = materialConfig.parameters.roughness;
+    roughnessInput.addEventListener("input", (event) => {
+      const roughness = parseFloat(event.target.value);
+      materialsMap[materialName].roughness = roughness;
+      materialsMap[materialName].needsUpdate = true;
+    });
+    section.appendChild(roughnessInput);
+
+    materialControlsContainer.appendChild(section);
+  });
+};
+
 // Main Execution
 const { scene, camera, renderer, controls } = initializeScene(
   config.canvasId,
@@ -161,9 +285,10 @@ let sliderPrevValues = {
   engineSpread: 0,
 };
 
-loadGLTFModel("fighter.gltf", (gltf) => {
+const materialsMap = {}; // To store references to the materials
+
+loadGLTFModel("fighter.gltf", config.materials, (gltf) => {
   spaceshipMesh = gltf.scene.getObjectByName("Shuttle");
-  console.log(spaceshipMesh);
   const empties = {
     nose: gltf.scene.getObjectByName("center_engine_point"),
     leftEnginePoint: gltf.scene.getObjectByName("left_engine_point"),
@@ -367,6 +492,7 @@ const sliderCallbacks = {
 };
 
 initializeSliders(config.sliders, sliderCallbacks);
+initializeMaterialControls(config.materials);
 
 function animate() {
   controls.update();
