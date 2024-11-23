@@ -63,6 +63,89 @@ const config = {
       },
     },
   },
+  spaceship: {
+    modelUrl: "fighter.gltf",
+    meshName: "Shuttle",
+    objects: {
+      nose: "center_engine_point",
+      leftEnginePoint: "left_engine_point",
+      rightEnginePoint: "right_engine_point",
+      rightWing: "right_wing",
+      leftWing: "left_wing",
+      leftEngineBody: "left_engine_body",
+      rightEngineBody: "right_engine_body",
+      leftEngineThruster: "left_engine_thruster",
+      rightEngineThruster: "right_engine_thruster",
+      centerEngine: "center_engine_body",
+      centerEngineThruster: "center_engine_thruster",
+    },
+    vertexGroups: {
+      nose: {
+        objectNames: ["nose"],
+        radiusScale: 1,
+      },
+      leftWing: {
+        objectNames: ["leftWing"],
+        radiusScale: 1,
+      },
+      rightWing: {
+        objectNames: ["rightWing"],
+        radiusScale: 1,
+      },
+      leftEnginePoint: {
+        objectNames: ["leftEnginePoint"],
+        radiusScale: 1,
+      },
+      rightEnginePoint: {
+        objectNames: ["rightEnginePoint"],
+        radiusScale: 1,
+      },
+      leftEngine: {
+        objectNames: ["leftEngineBody", "leftEngineThruster"],
+        radiusScale: 1,
+      },
+      rightEngine: {
+        objectNames: ["rightEngineBody", "rightEngineThruster"],
+        radiusScale: 1,
+      },
+      centerEngine: {
+        objectNames: ["centerEngine"],
+        radiusScale: 1,
+      },
+      centerEngineThruster: {
+        objectNames: ["centerEngineThruster"],
+        radiusScale: 1,
+      },
+    },
+  },
+  initialSliderValues: {
+    nose: 0,
+    wing: 0,
+    enginePoint: 0,
+    wingSpread: 0,
+    leftEngine: 0,
+    rightEngine: 0,
+    centerEngine: 0,
+    centerEngineThruster: 0,
+    engines: 0,
+    engineSpread: 0,
+  },
+};
+
+// Add Space Background
+const addSpaceBackground = (scene, textureUrl) => {
+  const textureLoader = new THREE.TextureLoader();
+  textureLoader.load(textureUrl, (texture) => {
+    // Create a large sphere
+    const geometry = new THREE.SphereGeometry(500, 32, 32); // Large enough to encompass the scene
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      side: THREE.BackSide, // Render the inside of the sphere
+      color: 0x555555, // Darken the texture
+    });
+    const sphere = new THREE.Mesh(geometry, material);
+    scene.add(sphere);
+  });
 };
 
 // Scene Initialization
@@ -260,48 +343,30 @@ const { scene, camera, renderer, controls } = initializeScene(
 );
 addLights(scene, config.lights);
 
+// Main Execution
+
+addLights(scene, config.lights);
+
+// Add space background
+addSpaceBackground(scene, "space.jpg"); // Replace "space.jpg" with the path to your space texture image
+
 let spaceshipMesh;
-let vertexGroups = {
-  nose: [],
-  leftWing: [],
-  rightWing: [],
-  leftEnginePoint: [],
-  rightEnginePoint: [],
-  leftEngine: [],
-  rightEngine: [],
-  centerEngine: [],
-  centerEngineThruster: [],
-};
-let sliderPrevValues = {
-  nose: 0,
-  wing: 0,
-  enginePoint: 0,
-  wingSpread: 0,
-  leftEngine: 0,
-  rightEngine: 0,
-  centerEngine: 0,
-  centerEngineThruster: 0,
-  engines: 0,
-  engineSpread: 0,
-};
+let vertexGroups = {};
+let sliderPrevValues = { ...config.initialSliderValues };
 
 const materialsMap = {}; // To store references to the materials
 
-loadGLTFModel("fighter.gltf", config.materials, (gltf) => {
-  spaceshipMesh = gltf.scene.getObjectByName("Shuttle");
-  const empties = {
-    nose: gltf.scene.getObjectByName("center_engine_point"),
-    leftEnginePoint: gltf.scene.getObjectByName("left_engine_point"),
-    rightEnginePoint: gltf.scene.getObjectByName("right_engine_point"),
-    rightWing: gltf.scene.getObjectByName("right_wing"),
-    leftWing: gltf.scene.getObjectByName("left_wing"),
-    leftEngineBody: gltf.scene.getObjectByName("left_engine_body"),
-    rightEngineBody: gltf.scene.getObjectByName("right_engine_body"),
-    leftEngineThruster: gltf.scene.getObjectByName("left_engine_thruster"),
-    rightEngineThruster: gltf.scene.getObjectByName("right_engine_thruster"),
-    centerEngine: gltf.scene.getObjectByName("center_engine_body"),
-    centerEngineThruster: gltf.scene.getObjectByName("center_engine_thruster"),
-  };
+loadGLTFModel(config.spaceship.modelUrl, config.materials, (gltf) => {
+  spaceshipMesh = gltf.scene.getObjectByName(config.spaceship.meshName);
+
+  const empties = {};
+  Object.entries(config.spaceship.objects).forEach(([key, objectName]) => {
+    const object = gltf.scene.getObjectByName(objectName);
+    if (!object) {
+      console.error(`Object ${objectName} not found in the GLTF.`);
+    }
+    empties[key] = object;
+  });
 
   if (!spaceshipMesh || Object.values(empties).some((obj) => !obj)) {
     console.error("One or more required objects are missing in the GLTF.");
@@ -310,83 +375,25 @@ loadGLTFModel("fighter.gltf", config.materials, (gltf) => {
 
   scene.add(spaceshipMesh);
 
-  vertexGroups = {
-    nose: getVerticesInSphere(
-      spaceshipMesh,
-      new THREE.Vector3().setFromMatrixPosition(empties.nose.matrixWorld),
-      empties.nose.scale.x * 1
-    ),
-    leftWing: getVerticesInSphere(
-      spaceshipMesh,
-      new THREE.Vector3().setFromMatrixPosition(empties.leftWing.matrixWorld),
-      empties.leftWing.scale.x * 1
-    ),
-    rightWing: getVerticesInSphere(
-      spaceshipMesh,
-      new THREE.Vector3().setFromMatrixPosition(empties.rightWing.matrixWorld),
-      empties.rightWing.scale.x * 1
-    ),
-    leftEnginePoint: getVerticesInSphere(
-      spaceshipMesh,
-      new THREE.Vector3().setFromMatrixPosition(
-        empties.leftEnginePoint.matrixWorld
-      ),
-      empties.leftEnginePoint.scale.x * 1
-    ),
-    rightEnginePoint: getVerticesInSphere(
-      spaceshipMesh,
-      new THREE.Vector3().setFromMatrixPosition(
-        empties.rightEnginePoint.matrixWorld
-      ),
-      empties.rightEnginePoint.scale.x * 1
-    ),
-    leftEngine: [
-      ...getVerticesInSphere(
-        spaceshipMesh,
-        new THREE.Vector3().setFromMatrixPosition(
-          empties.leftEngineBody.matrixWorld
-        ),
-        empties.leftEngineBody.scale.x * 1
-      ),
-      ...getVerticesInSphere(
-        spaceshipMesh,
-        new THREE.Vector3().setFromMatrixPosition(
-          empties.leftEngineThruster.matrixWorld
-        ),
-        empties.leftEngineThruster.scale.x * 1
-      ),
-    ],
-    rightEngine: [
-      ...getVerticesInSphere(
-        spaceshipMesh,
-        new THREE.Vector3().setFromMatrixPosition(
-          empties.rightEngineBody.matrixWorld
-        ),
-        empties.rightEngineBody.scale.x * 1
-      ),
-      ...getVerticesInSphere(
-        spaceshipMesh,
-        new THREE.Vector3().setFromMatrixPosition(
-          empties.rightEngineThruster.matrixWorld
-        ),
-        empties.rightEngineThruster.scale.x * 1
-      ),
-    ],
-    centerEngine: getVerticesInSphere(
-      spaceshipMesh,
-      new THREE.Vector3().setFromMatrixPosition(
-        empties.centerEngine.matrixWorld
-      ),
-      empties.centerEngine.scale.x * 1
-    ),
-    centerEngineThruster: getVerticesInSphere(
-      spaceshipMesh,
-      new THREE.Vector3().setFromMatrixPosition(
-        empties.centerEngineThruster.matrixWorld
-      ),
-      empties.centerEngineThruster.scale.x * 1
-    ),
-  };
+  // Initialize vertex groups based on the configuration
+  Object.entries(config.spaceship.vertexGroups).forEach(
+    ([groupName, groupConfig]) => {
+      const centers = groupConfig.objectNames.map((name) => {
+        const obj = empties[name];
+        return new THREE.Vector3().setFromMatrixPosition(obj.matrixWorld);
+      });
+
+      const radius = centers[0]
+        ? empties[groupConfig.objectNames[0]].scale.x * groupConfig.radiusScale
+        : 1;
+
+      const vertices = centers.reduce((acc, center) => {
+        return acc.concat(getVerticesInSphere(spaceshipMesh, center, radius));
+      }, []);
+
+      vertexGroups[groupName] = vertices;
+    }
+  );
 });
 
 const sliderCallbacks = {
