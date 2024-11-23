@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Vertex Manipulation</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="controls">
+        <label for="noseSlider">Nose Length</label>
+        <input type="range" id="noseSlider" min="-5" max="5" value="0" step="0.1">
+        <label for="wingSlider">Wing Length</label>
+        <input type="range" id="wingSlider" min="-5" max="5" value="0" step="0.1">
+        <label for="engineSlider">Engine Position</label>
+        <input type="range" id="engineSlider" min="-5" max="5" value="0" step="0.1">
+    </div>
+    <canvas id="threeCanvas"></canvas>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.155.0/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>
